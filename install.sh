@@ -16,7 +16,7 @@ quirk=1
 
 if ! grep -q 'conf.d/${var:USBID1}-${var:USBID2}.conf' "$ucm/USB-Audio/USB-Audio.conf" 2>/dev/null; then
     echo "alsa-ucm-conf >= 1.2.15 needed (has the USB-Audio/conf.d hook)."
-    echo "Installed: $(rpm -q alsa-ucm-conf 2>/dev/null || echo unknown). Try: sudo dnf upgrade alsa-ucm-conf"
+    echo "Installed: $(rpm -q alsa-ucm 2>/dev/null || echo unknown). Try: sudo dnf upgrade alsa-ucm"
     exit 1
 fi
 
@@ -39,14 +39,31 @@ if (( quirk )); then
     fi
 fi
 
-# Re-run the card's UCM boot sequence (creates the ctl remap) if it's plugged in.
+# alsaucm is used below to validate the profile (Fedora: alsa-ucm-utils).
+if ! command -v alsaucm >/dev/null && command -v dnf >/dev/null; then
+    dnf install -y -q alsa-ucm-utils >/dev/null 2>&1 || true
+fi
+
+ok=1
 for id in /proc/asound/card*/id; do
-    if [[ "$(cat "$id" 2>/dev/null)" == EVO4* ]]; then
-        n=${id%/id}; n=${n##*card}
-        command -v alsactl >/dev/null && alsactl restore "$n" >/dev/null 2>&1 || true
-        echo "re-initialised ALSA card $n"
+    [[ "$(cat "$id" 2>/dev/null)" == EVO4* ]] || continue
+    n=${id%/id}; n=${n##*card}
+    if command -v alsaucm >/dev/null; then
+        if out=$(alsaucm -c "hw:$n" set _verb HiFi get _devices 2>&1); then
+            echo "UCM profile loads OK on card $n:"; echo "$out" | sed 's/^/    /'
+        else
+            ok=0; echo "ERROR: UCM profile failed to load on card $n:"; echo "$out" | sed 's/^/    /'
+        fi
     fi
+    # Runs the UCM boot sequence, which writes the ctl remap to /var/lib/alsa.
+    if command -v alsactl >/dev/null; then
+        alsactl restore "$n" 2>&1 | grep -v -i 'no state is present' || true
+    fi
+    ls /var/lib/alsa/card"$n".conf.d/ 2>/dev/null | grep -q remap \
+        && echo "ctl remap active on card $n" \
+        || echo "note: ctl remap not written yet for card $n (replug the EVO4)"
 done
+(( ok )) || { echo "Please send the error above."; exit 1; }
 
 cat <<'EOF'
 
@@ -56,6 +73,6 @@ Done. Now, as your normal user (not root):
 Check:
   wpctl status                         # EVO4 "Headphones" sink should be default
   wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.5   # the EVO4 LED ring should move
-  alsaucm -c EVO4 get _verbs        # should list HiFi + Direct
+  pactl list cards | grep -A2 -i "active profile"   # EVO4 should be on HiFi
 If the knob/volume still don't sync, replug the EVO4 once (applies the quirk).
 EOF

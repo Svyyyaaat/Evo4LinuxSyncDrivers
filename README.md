@@ -47,7 +47,7 @@ and audient-evo-py reports this working once PipeWire uses the hardware control.
 
 ```bash
 git clone https://github.com/svyyyaaat/evo4linuxsyncdrivers && cd evo4linuxsyncdrivers
-sudo ./install.sh                 # needs alsa-ucm-conf >= 1.2.15 (rpm -q alsa-ucm-conf)
+sudo ./install.sh                 # needs alsa-ucm-conf >= 1.2.15 (rpm -q alsa-ucm)
 systemctl --user restart wireplumber
 ```
 
