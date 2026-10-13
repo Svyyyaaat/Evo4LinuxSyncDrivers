@@ -20,6 +20,15 @@ if ! grep -q 'conf.d/${var:USBID1}-${var:USBID2}.conf' "$ucm/USB-Audio/USB-Audio
     exit 1
 fi
 
+# alsa-lib 1.2.15.x checks "Optional" UCM includes against the wrong path, so
+# the USB-Audio/conf.d hook never loads anything. Fixed in 1.2.16.
+alib=$(rpm -q --qf '%{VERSION}\n' alsa-lib 2>/dev/null | head -n1 || true)
+if [[ -n "$alib" && "$(printf '%s\n1.2.16\n' "$alib" | sort -V | head -n1)" != 1.2.16 ]]; then
+    echo "alsa-lib $alib is too old (needs >= 1.2.16, it has a UCM include bug)."
+    echo "Run: sudo dnf upgrade --refresh alsa-lib alsa-ucm alsa-utils"
+    exit 1
+fi
+
 install -d "$ucm/USB-Audio/conf.d/evo4-sync"
 install -m 644 "$here/ucm2/USB-Audio/conf.d/2708-0006.conf" "$ucm/USB-Audio/conf.d/"
 install -m 644 "$here"/ucm2/USB-Audio/conf.d/evo4-sync/*.conf "$ucm/USB-Audio/conf.d/evo4-sync/"
