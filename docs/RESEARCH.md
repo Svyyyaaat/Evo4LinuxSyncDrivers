@@ -44,9 +44,17 @@ Fixes, from most to least invasive:
 1. Patched kernel (upstream, coming). The proper fix.
 2. `evo_raw` out-of-tree module renames the control. Needs DKMS/akmods, plus module
    signing under Secure Boot on Fedora.
-3. **This repo:** alsa-lib's `remap` ctl plugin, set up by a UCM `conf.d`
-   override (alsa-ucm-conf ≥ 1.2.15). It's pure userspace and survives kernel updates.
-   This is the same mechanism alsa-ucm-conf already uses for Behringer UMC devices.
+3. **This repo:** a UCM `conf.d` override (alsa-ucm-conf ≥ 1.2.15, alsa-lib
+   ≥ 1.2.16) that names the element `'EVO4 '` in `PlaybackMixerElem`. It's pure
+   userspace and survives kernel updates.
+
+Gotchas found while testing on Fedora 43:
+- alsa-lib 1.2.15.x skips every `Optional` UCM include (it checks access() on
+  the path without the ucm2 prefix), so the `conf.d` hook is dead until 1.2.16.
+- `/common/directm.conf` (the "Direct" verb) only exists in alsa-ucm-conf 1.2.16+.
+- A first version renamed the control with alsa-lib's `remap` ctl plugin.
+  Volume writes worked, but knob change events never reached PipeWire, so its
+  volume went stale. Using the hardware element directly fixes that.
 
 ## LEDs
 

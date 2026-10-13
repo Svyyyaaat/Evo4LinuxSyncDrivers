@@ -64,13 +64,9 @@ for id in /proc/asound/card*/id; do
             ok=0; echo "ERROR: UCM profile failed to load on card $n:"; echo "$out" | sed 's/^/    /'
         fi
     fi
-    # Runs the UCM boot sequence, which writes the ctl remap to /var/lib/alsa.
-    if command -v alsactl >/dev/null; then
-        alsactl restore "$n" 2>&1 | grep -v -i 'no state is present' || true
-    fi
-    ls /var/lib/alsa/card"$n".conf.d/ 2>/dev/null | grep -q remap \
-        && echo "ctl remap active on card $n" \
-        || echo "note: ctl remap not written yet for card $n (replug the EVO4)"
+    # Earlier versions of this fix used an alsa-lib ctl remap; remove it.
+    rm -f /var/lib/alsa/card"$n".conf.d/ctl-remap.conf
+    rmdir /var/lib/alsa/card"$n".conf.d 2>/dev/null || true
 done
 (( ok )) || { echo "Please send the error above."; exit 1; }
 

@@ -26,11 +26,9 @@ On Windows, Audient's driver maps the system volume onto FU 10 directly.
 
 A UCM override (`ucm2/USB-Audio/conf.d/`) that:
 
-1. uses alsa-lib's `remap` ctl plugin to expose FU 10 as a 2-channel
-   **`Main Output Playback Volume`**, covering only the real L/R channels. Channels
-   3/4 are internal, and PipeWire's writes to them are rejected by the firmware.
-2. points PipeWire's "Headphones" sink at that element (`PlaybackMixerElem`).
-3. keeps everything else from the upstream EVO4 profile (stereo output,
+1. points PipeWire's "Headphones" sink straight at the hardware control's
+   mixer element, `'EVO4 '` (with the trailing space), via `PlaybackMixerElem`.
+2. keeps everything else from the upstream EVO4 profile (stereo output,
    loopback sink/source, separate Mic 1 / Mic 2 sources).
 
 It works with both naming schemes: it detects whether the kernel already exposes
@@ -38,10 +36,13 @@ It works with both naming schemes: it detects whether the kernel already exposes
 `IGNORE_CTL_ERROR` quirk. That works around a 7.2+/6.18-LTS regression where a
 rejected write makes PipeWire apply the volume twice.
 
-Result: `wpctl`, media keys, Waybar/pavucontrol sliders all move the EVO's
-hardware volume (the LED ring shows it). Turning the knob should also update
-PipeWire. The EVO has a UAC2 interrupt endpoint that reports control changes,
-and audient-evo-py reports this working once PipeWire uses the hardware control.
+Result: `wpctl`, `pamixer`, media keys, Waybar/pavucontrol sliders all move the
+EVO's hardware volume (the LED ring shows it). Turning the knob should update PipeWire
+too: the EVO reports knob changes over its USB interrupt endpoint, and the kernel
+turns them into ALSA control events (check with `alsactl monitor hw:EVO4`).
+
+The control has 4 channels, but only 1/2 are real. The firmware rejects PipeWire's
+writes to 3/4, and the `IGNORE_CTL_ERROR` quirk keeps that harmless.
 
 ### Install (Fedora)
 
