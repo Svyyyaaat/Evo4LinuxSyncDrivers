@@ -58,7 +58,7 @@ for id in /proc/asound/card*/id; do
     [[ "$(cat "$id" 2>/dev/null)" == EVO4* ]] || continue
     n=${id%/id}; n=${n##*card}
     if command -v alsaucm >/dev/null; then
-        if out=$(alsaucm -c "hw:$n" set _verb HiFi get _devices 2>&1); then
+        if out=$(alsaucm -c "hw:$n" list _devices/HiFi 2>&1); then
             echo "UCM profile loads OK on card $n:"; echo "$out" | sed 's/^/    /'
         else
             ok=0; echo "ERROR: UCM profile failed to load on card $n:"; echo "$out" | sed 's/^/    /'
